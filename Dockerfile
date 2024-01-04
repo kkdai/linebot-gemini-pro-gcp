@@ -1,41 +1,20 @@
-# limitations under the License.
+# 使用官方 Golang 鏡像作為基礎鏡像
+FROM golang:1.21.5
 
-# [START cloudrun_helloworld_dockerfile]
-# [START run_helloworld_dockerfile]
-
-# Use the offical golang image to create a binary.
-# This is based on Debian and sets the GOPATH to /go.
-# https://hub.docker.com/_/golang
-FROM golang:1.21-bookworm as builder
-
-# Create and change to the app directory.
+# 在容器內設置工作目錄
 WORKDIR /app
 
-# Retrieve application dependencies.
-# This allows the container build to reuse cached dependencies.
-# Expecting to copy go.mod and if present go.sum.
-COPY go.* ./
+# 將本地的文件複製到容器的工作目錄
+COPY . .
+
+# 下載所有依賴項
 RUN go mod download
 
-# Copy local code to the container image.
-COPY . ./
+# 將本地的源碼文件複製到容器的工作目錄
+# COPY . .
 
-# Build the binary.
-RUN go build -v -o server
+# 編譯應用程式
+RUN go build -o main .
 
-# Use the official Debian slim image for a lean production container.
-# https://hub.docker.com/_/debian
-# https://docs.docker.com/develop/develop-images/multistage-build/#use-multi-stage-builds
-FROM debian:bookworm-slim
-RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy the binary to the production image from the builder stage.
-COPY --from=builder /app/server /app/server
-
-# Run the web service on container startup.
-CMD ["/app/server"]
-
-# [END run_helloworld_dockerfile]
-# [END cloudrun_helloworld_dockerfile]
+# 指定容器啟動時執行的命令
+CMD ["/app/main"]
