@@ -1,0 +1,39 @@
+{
+  "name": "linebot-geminipro-gcp",
+  "env": {
+    "ChannelSecret": {
+      "description": "LINE Bot secret key",
+      "value": "ooooooo",
+      "required": true
+    },
+    "ChannelAccessToken": {
+      "description": "LINE Bot access key",
+      "value": "xxxxxxxx",
+      "required": true
+    },
+    "API_ENV": {
+      "value": "production",
+      "required": true
+    },
+    "LOG": {
+      "description": "Log level",
+      "value": "INFO"
+    },
+    "GOOGLE_CLOUD_PROJECT": {
+      "description": "Google cloud project name",
+      "value": "xxxx"
+    },
+    "GOOGLE_GEMINI_API_KEY": {
+      "description": "Google Gemini Pro API key",
+      "value": "Alxxxxxx"
+    }
+  },
+  "options": {
+    "allow-unauthenticated": true,
+    "memory": "512Mi",
+    "cpu": "1",
+    "http2": false,
+    "concurrency": 10,
+    "max-instances": 5
+  }
+}
