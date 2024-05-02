@@ -11,6 +11,10 @@
       "value": "xxxxxxxx",
       "required": true
     },
+    "GOOGLE_GEMINI_API_KEY": {
+      "description": "Google Gemini Pro API key",
+      "value": "Alxxxxxx"
+    },
     "API_ENV": {
       "value": "production",
       "required": true
@@ -18,14 +22,6 @@
     "LOG": {
       "description": "Log level",
       "value": "INFO"
-    },
-    "GOOGLE_CLOUD_PROJECT": {
-      "description": "Google cloud project name",
-      "value": "xxxx"
-    },
-    "GOOGLE_GEMINI_API_KEY": {
-      "description": "Google Gemini Pro API key",
-      "value": "Alxxxxxx"
     }
   },
   "options": {

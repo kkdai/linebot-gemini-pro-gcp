@@ -1,7 +1,7 @@
 module github.com/kkdai/linebot-gemini-pro-gcp
 
-// +heroku goVersion go1.21.1
-go 1.21.1
+// +heroku goVersion go1.21.5
+go 1.21.5
 
 require (
 	github.com/google/generative-ai-go v0.5.0

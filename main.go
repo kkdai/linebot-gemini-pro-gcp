@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Println("Bot:", bot, " err:", err)
 	}
-	http.HandleFunc("/callback", callbackHandler)
+	http.HandleFunc("/", callbackHandler)
 	port := os.Getenv("PORT")
 	addr := fmt.Sprintf(":%s", port)
 	http.ListenAndServe(addr, nil)
