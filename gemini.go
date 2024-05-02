@@ -9,8 +9,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-const ImageTemperture = 0.8
-const ChatTemperture = 0.3
+const ImageTemperture = 0.5
+const ChatTemperture = 0.2
 
 // Gemini Image: Input an image and get the response string.
 func GeminiImage(imgData []byte) (string, error) {
