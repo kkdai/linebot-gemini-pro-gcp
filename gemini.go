@@ -39,6 +39,20 @@ func GeminiImage(imgData []byte) (string, error) {
 	return printResponse(resp), nil
 }
 
+func GeminiChat(msg string) (*genai.GenerateContentResponse, error) {
+	ctx := context.Background()
+	// Access your API key as an environment variable (see "Set up your API key" above)
+	client, err := genai.NewClient(ctx, option.WithAPIKey(geminiKey))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	// For text-only input, use the gemini-pro model
+	model := client.GenerativeModel("gemini-pro")
+	return model.GenerateContent(ctx, genai.Text("Write a story about a magic backpack."))
+}
+
 // startNewChatSession	: Start a new chat session
 func startNewChatSession() *genai.ChatSession {
 	ctx := context.Background()

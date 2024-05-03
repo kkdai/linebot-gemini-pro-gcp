@@ -60,25 +60,11 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 			switch message := event.Message.(type) {
 			// Handle only on text message
 			case *linebot.TextMessage:
-				req := message.Text
-				// 檢查是否已經有這個用戶的 ChatSession or req == "reset"
-				cs, ok := userSessions[event.Source.UserID]
-				if !ok {
-					// 如果沒有，則創建一個新的 ChatSession
-					cs = startNewChatSession()
-					userSessions[event.Source.UserID] = cs
-				}
-				if req == "reset" {
-					// 如果需要重置記憶，創建一個新的 ChatSession
-					cs = startNewChatSession()
-					userSessions[event.Source.UserID] = cs
-					if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage("很高興初次見到你，請問有什麼想了解的嗎？")).Do(); err != nil {
-						log.Print(err)
-					}
+				res, err := GeminiChat(message.Text)
+				if err != nil {
+					log.Println("Got GeminiChat err:", err)
 					continue
 				}
-				// 使用這個 ChatSession 來處理訊息 & Reply with Gemini result
-				res := send(cs, req)
 				ret := printResponse(res)
 				if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ret)).Do(); err != nil {
 					log.Print(err)
