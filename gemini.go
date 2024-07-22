@@ -22,7 +22,7 @@ func GeminiImage(imgData []byte) (string, error) {
 	defer client.Close()
 
 	model := client.GenerativeModel("gemini-1.5-flash-latest")
-	value := float32(ImageTemperture)
+	value := float32(ImageTemperture) // Set the temperature to 0.5
 	model.Temperature = &value
 	prompt := []genai.Part{
 		genai.ImageData("png", imgData),

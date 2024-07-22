@@ -60,6 +60,10 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 			switch message := event.Message.(type) {
 			// Handle only on text message
 			case *linebot.TextMessage:
+				// skip this message if not start with @
+				if message.Text[0] != '@' {
+					continue
+				}
 				res, err := GeminiChat(message.Text)
 				if err != nil {
 					log.Println("Got GeminiChat err:", err)
