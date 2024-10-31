@@ -71,11 +71,13 @@ func main() {
 					switch e.Source.(type) {
 					case webhook.GroupSource:
 					case webhook.RoomSource:
+						log.Println("Group or Room message")
 						for _, mention := range message.Mention.Mentionees {
+							log.Println("mention data=", mention)
 							switch mention.GetType() {
 							case "user":
 								botMention := mention.(*webhook.UserMentionee)
-								fmt.Println("Mentioned user ID=", botMention.UserId, " isSelf=", botMention.IsSelf)
+								log.Println("Mentioned user ID=", botMention.UserId, " isSelf=", botMention.IsSelf)
 
 								if botMention.IsSelf {
 									if _, err = bot.ReplyMessage(
@@ -97,6 +99,8 @@ func main() {
 								}
 							}
 						}
+						log.Println("Group or Room message ----- end")
+						return
 					}
 
 					res, err := GeminiChat(message.Text)
