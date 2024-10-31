@@ -13,104 +13,177 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/google/generative-ai-go/genai"
-	"github.com/line/line-bot-sdk-go/v7/linebot"
+	"github.com/line/line-bot-sdk-go/v8/linebot/messaging_api"
+	"github.com/line/line-bot-sdk-go/v8/linebot/webhook"
 )
-
-var bot *linebot.Client
 
 var geminiKey string
 
-// 建立一個 map 來儲存每個用戶的 ChatSession
-var userSessions = make(map[string]*genai.ChatSession)
-
 func main() {
-	var err error
 	geminiKey = os.Getenv("GOOGLE_GEMINI_API_KEY")
-	bot, err = linebot.New(os.Getenv("ChannelSecret"), os.Getenv("ChannelAccessToken"))
+	channelSecret := os.Getenv("ChannelSecret")
+	bot, err := messaging_api.NewMessagingApiAPI(
+		os.Getenv("ChannelAccessToken"),
+	)
 	if err != nil {
-		log.Println("Bot:", bot, " err:", err)
-	}
-	http.HandleFunc("/", callbackHandler)
-	port := os.Getenv("PORT")
-	addr := fmt.Sprintf(":%s", port)
-	http.ListenAndServe(addr, nil)
-}
-
-func callbackHandler(w http.ResponseWriter, r *http.Request) {
-	events, err := bot.ParseRequest(r)
-
-	if err != nil {
-		if err == linebot.ErrInvalidSignature {
-			w.WriteHeader(400)
-		} else {
-			w.WriteHeader(500)
-		}
+		log.Fatal(err)
 		return
 	}
+	blob, err := messaging_api.NewMessagingApiBlobAPI(os.Getenv("ChannelAccessToken"))
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	for _, event := range events {
-		if event.Type == linebot.EventTypeMessage {
-			switch message := event.Message.(type) {
-			// Handle only on text message
-			case *linebot.TextMessage:
-				// skip this message if not start with @
-				if message.Text[0] != '@' {
-					continue
-				}
-				res, err := GeminiChat(message.Text)
-				if err != nil {
-					log.Println("Got GeminiChat err:", err)
-					continue
-				}
-				ret := printResponse(res)
-				if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ret)).Do(); err != nil {
-					log.Print(err)
-				}
-			// Handle only on Sticker message
-			case *linebot.StickerMessage:
-				var kw string
-				for _, k := range message.Keywords {
-					kw = kw + "," + k
-				}
+	// Setup HTTP Server for receiving requests from LINE platform
+	http.HandleFunc("/callback", func(w http.ResponseWriter, req *http.Request) {
+		log.Println("/callback called...")
 
-				outStickerResult := fmt.Sprintf("收到貼圖訊息: %s, pkg: %s kw: %s  text: %s", message.StickerID, message.PackageID, kw, message.Text)
-				if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(outStickerResult)).Do(); err != nil {
-					log.Print(err)
-				}
+		cb, err := webhook.ParseRequest(channelSecret, req)
+		if err != nil {
+			log.Printf("Cannot parse request: %+v\n", err)
+			if errors.Is(err, webhook.ErrInvalidSignature) {
+				w.WriteHeader(400)
+			} else {
+				w.WriteHeader(500)
+			}
+			return
+		}
 
-			// Handle only image message
-			case *linebot.ImageMessage:
-				log.Println("Got img msg ID:", message.ID)
+		log.Println("Handling events...")
+		for _, event := range cb.Events {
+			log.Printf("/callback called%+v...\n", event)
 
-				//Get image binary from LINE server based on message ID.
-				content, err := bot.GetMessageContent(message.ID).Do()
-				if err != nil {
-					log.Println("Got GetMessageContent err:", err)
-				}
-				defer content.Content.Close()
-				data, err := io.ReadAll(content.Content)
-				if err != nil {
-					log.Fatal(err)
-				}
-				ret, err := GeminiImage(data)
-				if err != nil {
-					ret = "無法辨識圖片內容，請重新輸入:" + err.Error()
-				}
-				if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ret)).Do(); err != nil {
-					log.Print(err)
-				}
+			switch e := event.(type) {
+			case webhook.MessageEvent:
+				switch message := e.Message.(type) {
+				case webhook.TextMessageContent:
+					switch e.Source.(type) {
+					case webhook.GroupSource:
+					case webhook.RoomSource:
+						for _, mention := range message.Mention.Mentionees {
+							switch mention.GetType() {
+							case "user":
+								botMention := mention.(*webhook.UserMentionee)
+								fmt.Println("Mentioned user ID=", botMention.UserId, " isSelf=", botMention.IsSelf)
 
-			// Handle only video message
-			case *linebot.VideoMessage:
-				log.Println("Got video msg ID:", message.ID)
+								if botMention.IsSelf {
+									if _, err = bot.ReplyMessage(
+										&messaging_api.ReplyMessageRequest{
+											ReplyToken: e.ReplyToken,
+											Messages: []messaging_api.MessageInterface{
+												messaging_api.TextMessage{
+													Text: "你好，我是 Gemini Chat Bot，請問有什麼可以幫助您的嗎？",
+												},
+											},
+										},
+									); err != nil {
+										log.Print(err)
+									} else {
+										log.Println("Sent text reply.")
+									}
+
+									return
+								}
+							}
+						}
+					}
+
+					res, err := GeminiChat(message.Text)
+					if err != nil {
+						log.Println("Got GeminiChat err:", err)
+						continue
+					}
+					ret := printResponse(res)
+					if _, err = bot.ReplyMessage(
+						&messaging_api.ReplyMessageRequest{
+							ReplyToken: e.ReplyToken,
+							Messages: []messaging_api.MessageInterface{
+								messaging_api.TextMessage{
+									Text: ret,
+								},
+							},
+						},
+					); err != nil {
+						log.Print(err)
+					} else {
+						log.Println("Sent text reply.")
+					}
+				case webhook.StickerMessageContent:
+					replyMessage := fmt.Sprintf(
+						"sticker id is %s, stickerResourceType is %s", message.StickerId, message.StickerResourceType)
+					if _, err = bot.ReplyMessage(
+						&messaging_api.ReplyMessageRequest{
+							ReplyToken: e.ReplyToken,
+							Messages: []messaging_api.MessageInterface{
+								messaging_api.TextMessage{
+									Text: replyMessage,
+								},
+							},
+						}); err != nil {
+						log.Print(err)
+					} else {
+						log.Println("Sent sticker reply.")
+					}
+				case webhook.ImageMessageContent:
+					content, err := blob.GetMessageContent(message.Id)
+					if err != nil {
+						log.Println("Got GetMessageContent err:", err)
+						return
+					}
+					defer content.Body.Close()
+					if err != nil {
+						log.Println("Got GetMessageContent err:", err)
+					}
+					data, err := io.ReadAll(content.Body)
+					if err != nil {
+						log.Fatal(err)
+					}
+					ret, err := GeminiImage(data)
+					if err != nil {
+						ret = "無法辨識圖片內容，請重新輸入:" + err.Error()
+					}
+					if _, err = bot.ReplyMessage(
+						&messaging_api.ReplyMessageRequest{
+							ReplyToken: e.ReplyToken,
+							Messages: []messaging_api.MessageInterface{
+								messaging_api.TextMessage{
+									Text: ret,
+								},
+							},
+						}); err != nil {
+						log.Print(err)
+					} else {
+						log.Println("Sent sticker reply.")
+					}
+
+				default:
+					log.Printf("Unsupported message content: %T\n", e.Message)
+				}
+			default:
+				log.Printf("Unsupported message: %T\n", event)
 			}
 		}
+	})
+
+	// This is just sample code.
+	// For actual use, you must support HTTPS by using `ListenAndServeTLS`, a reverse proxy or something else.
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "5000"
+	}
+	fmt.Println("http://localhost:" + port + "/")
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal(err)
 	}
 }
