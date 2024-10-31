@@ -93,10 +93,10 @@ func main() {
 						}
 						return
 					case webhook.GroupSource:
-						group := e.Source.(*webhook.GroupSource).GroupId
+						group := e.Source.(webhook.GroupSource).GroupId
 						log.Println("Group ID=", group)
 					case webhook.RoomSource:
-						room := e.Source.(*webhook.RoomSource).RoomId
+						room := e.Source.(webhook.RoomSource).RoomId
 						log.Println("Room ID=", room)
 						for _, mention := range message.Mention.Mentionees {
 							log.Println("mention data=", mention)
