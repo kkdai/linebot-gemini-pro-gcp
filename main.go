@@ -99,7 +99,7 @@ func main() {
 							log.Println("mention data=", mention)
 							switch mention.GetType() {
 							case "user":
-								botMention := mention.(*webhook.UserMentionee)
+								botMention := mention.(webhook.UserMentionee)
 								log.Println("Mentioned user ID=", botMention.UserId, " isSelf=", botMention.IsSelf)
 
 								if botMention.IsSelf {
