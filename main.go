@@ -95,7 +95,8 @@ func main() {
 					case webhook.GroupSource:
 						group := e.Source.(webhook.GroupSource).GroupId
 						log.Println("Group ID=", group)
-						if len(message.Mention.Mentionees) == 0 {
+						// Bot only handle msg when it is mentioned
+						if message.Mention == nil {
 							log.Println("No mention")
 							return
 						}
