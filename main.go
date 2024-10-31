@@ -69,9 +69,35 @@ func main() {
 				switch message := e.Message.(type) {
 				case webhook.TextMessageContent:
 					switch e.Source.(type) {
+					case webhook.UserSource:
+						log.Println("1 on 1 message")
+						res, err := GeminiChat(message.Text)
+						if err != nil {
+							log.Println("Got GeminiChat err:", err)
+							continue
+						}
+						ret := printResponse(res)
+						if _, err = bot.ReplyMessage(
+							&messaging_api.ReplyMessageRequest{
+								ReplyToken: e.ReplyToken,
+								Messages: []messaging_api.MessageInterface{
+									messaging_api.TextMessage{
+										Text: ret,
+									},
+								},
+							},
+						); err != nil {
+							log.Print(err)
+						} else {
+							log.Println("Sent text reply.")
+						}
+						return
 					case webhook.GroupSource:
+						group := e.Source.(*webhook.GroupSource).GroupId
+						log.Println("Group ID=", group)
 					case webhook.RoomSource:
-						log.Println("Group or Room message")
+						room := e.Source.(*webhook.RoomSource).RoomId
+						log.Println("Room ID=", room)
 						for _, mention := range message.Mention.Mentionees {
 							log.Println("mention data=", mention)
 							switch mention.GetType() {
@@ -99,29 +125,8 @@ func main() {
 								}
 							}
 						}
-						log.Println("Group or Room message ----- end")
+						log.Println(" ----- end")
 						return
-					}
-
-					res, err := GeminiChat(message.Text)
-					if err != nil {
-						log.Println("Got GeminiChat err:", err)
-						continue
-					}
-					ret := printResponse(res)
-					if _, err = bot.ReplyMessage(
-						&messaging_api.ReplyMessageRequest{
-							ReplyToken: e.ReplyToken,
-							Messages: []messaging_api.MessageInterface{
-								messaging_api.TextMessage{
-									Text: ret,
-								},
-							},
-						},
-					); err != nil {
-						log.Print(err)
-					} else {
-						log.Println("Sent text reply.")
 					}
 				case webhook.StickerMessageContent:
 					replyMessage := fmt.Sprintf(
