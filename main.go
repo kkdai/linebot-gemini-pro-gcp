@@ -95,6 +95,11 @@ func main() {
 					case webhook.GroupSource:
 						group := e.Source.(webhook.GroupSource).GroupId
 						log.Println("Group ID=", group)
+						if len(message.Mention.Mentionees) == 0 {
+							log.Println("No mention")
+							return
+						}
+
 						for _, mention := range message.Mention.Mentionees {
 							log.Println("mention data=", mention)
 							switch mention.GetType() {
@@ -123,10 +128,12 @@ func main() {
 							}
 						}
 						log.Println("Group ----- end")
+						return
 					case webhook.RoomSource:
 						room := e.Source.(webhook.RoomSource).RoomId
 						log.Println("Room ID=", room)
 						log.Println("Room ----- end")
+						return
 					}
 				case webhook.StickerMessageContent:
 					replyMessage := fmt.Sprintf(
